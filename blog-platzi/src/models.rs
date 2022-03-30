@@ -1,4 +1,10 @@
-#[derive(Queryable)]
+#[derive(Queryable, Debug)]
+pub struct PostSimplificado {
+    pub title: String,
+    pub body: String,
+}
+
+#[derive(Queryable, Debug)]
 pub struct Post {
     pub id: i32,
     pub title: String,
