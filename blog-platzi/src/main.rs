@@ -21,15 +21,7 @@ fn main() {
     use self::schema::posts;
     use self::schema::posts::dsl::*;
 
-    // let new_post = NewPost {
-    //     title: "Mi segundo blogpost",
-    //     body: "2 Lorem impsiingsdd",
-    //     slug: "segundo-post",
-    // };
-
-    // let post: Post = diesel::insert_into(posts::table).values(new_post).get_result(&conn).expect("La insertada, falló");
-
-    let post_update = diesel::update(posts.filter(id.eq(3))).set((body.eq("Este es el post que hemos editado otra vez"), title.eq("Mi tercer blogpost"))).get_result::<Post>(&conn).expect("Error en el update");
+    diesel::delete(posts.filter(slug.like("%-post%"))).execute(&conn).expect("Ha fallado la eliminacion del el tercer post");
 
 
     // Select * from posts
