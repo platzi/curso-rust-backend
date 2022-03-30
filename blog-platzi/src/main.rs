@@ -10,26 +10,28 @@ use std::env;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
+use diesel::r2d2::{self, ConnectionManager};
+use diesel::r2d2::Pool;
 
-fn main() {
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+
+#[get("/")]
+async fn hello_wold() -> impl Responder {
+    HttpResponse::Ok().body("Hola Platzi!!!")
+}
+
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     dotenv().ok();
     let db_url = env::var("DATABASE_URL").expect("db url variable no encontrada");
 
-    let conn = PgConnection::establish(&db_url).expect("No nos pudimos conectar a la base de datos");
+    let connection = ConnectionManager::<PgConnection>::new(db_url);
 
-    use self::models::{Post, NewPost, PostSimplificado};
-    use self::schema::posts;
-    use self::schema::posts::dsl::*;
+    let pool = Pool::builder().build(connection).expect("No se pudo construir la Pool");
 
-    diesel::delete(posts.filter(slug.like("%-post%"))).execute(&conn).expect("Ha fallado la eliminacion del el tercer post");
-
-
-    // Select * from posts
-    println!("Query sin limites");
-    let posts_result = posts.load::<Post>(&conn).expect("Error al ejecutar la query");
-
-    for post in posts_result {
-        println!("{:?}", post);
-    }
+    HttpServer::new(move || {
+        App::new().service(hello_wold).data(pool.clone())
+    }).bind(("0.0.0.0", 9900)).unwrap().run().await
 
 }
