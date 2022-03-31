@@ -97,6 +97,8 @@ async fn new_post(pool: web::Data<DbPool>, item: web::Json<NewPostHandler>) -> i
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     let db_url = env::var("DATABASE_URL").expect("db url variable no encontrada");
+    let port = env::var("PORT").expect("db url variable no encontrada");
+    let port : u16 = port.parse().unwrap();
 
     let connection = ConnectionManager::<PgConnection>::new(db_url);
 
@@ -112,6 +114,6 @@ async fn main() -> std::io::Result<()> {
         .service(get_post)
         .data(pool.clone())
         .data(tera)
-    }).bind(("0.0.0.0", 9900)).unwrap().run().await
+    }).bind(("0.0.0.0", port)).unwrap().run().await
 
 }
