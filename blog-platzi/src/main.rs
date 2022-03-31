@@ -15,9 +15,24 @@ use diesel::r2d2::Pool;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
+pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+
+use self::models::Post;
+use self::schema::posts;
+use self::schema::posts::dsl::*;
+
+
 #[get("/")]
-async fn hello_wold() -> impl Responder {
-    HttpResponse::Ok().body("Hola Platzi!!!")
+async fn index(pool: web::Data<DbPool>) -> impl Responder {
+    let conn = pool.get().expect("Problemas al traer la base de datos");
+
+    match web::block(move || {posts.load::<Post>(&conn)}).await {
+        Ok(data) => {
+            return HttpResponse::Ok().body(format!("{:?}", data));
+        },
+        Err(err) => HttpResponse::Ok().body("Error al recibir la data")
+    }
+
 }
 
 
@@ -31,7 +46,7 @@ async fn main() -> std::io::Result<()> {
     let pool = Pool::builder().build(connection).expect("No se pudo construir la Pool");
 
     HttpServer::new(move || {
-        App::new().service(hello_wold).data(pool.clone())
+        App::new().service(index).data(pool.clone())
     }).bind(("0.0.0.0", 9900)).unwrap().run().await
 
 }
