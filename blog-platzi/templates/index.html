@@ -7,6 +7,13 @@
     <title>Document</title>
 </head>
 <body>
-    MI primer template con Tera
+    {% for post in posts %}
+        <div>
+            <h1>
+                <a href="/blog/{{post.slug}}">{{ post.title }} </a>
+            </h1>
+            <p>{{post.body | truncate(lenght=15)}}</p>
+        </div>
+    {% endfor %}
 </body>
 </html>

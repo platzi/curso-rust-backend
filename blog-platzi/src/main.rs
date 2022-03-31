@@ -23,24 +23,57 @@ use self::schema::posts;
 use self::schema::posts::dsl::*;
 
 
-#[get("/prueba-tera")]
-async fn tera_test(template_manager: web::Data<tera::Tera>) -> impl Responder {
-
-    let mut ctx = tera::Context::new();
-
-    HttpResponse::Ok().content_type("text/html").body(
-        template_manager.render("index.html", &ctx).unwrap()
-    )
-}
-
-
 #[get("/")]
-async fn index(pool: web::Data<DbPool>) -> impl Responder {
+async fn index(pool: web::Data<DbPool>, template_manager: web::Data<tera::Tera>) -> impl Responder {
     let conn = pool.get().expect("Problemas al traer la base de datos");
 
     match web::block(move || {posts.load::<Post>(&conn)}).await {
         Ok(data) => {
-            return HttpResponse::Ok().body(format!("{:?}", data));
+            let data = data.unwrap();
+
+            let mut ctx = tera::Context::new();
+            ctx.insert("posts", &data);
+
+            HttpResponse::Ok().content_type("text/html").body(
+                template_manager.render("index.html", &ctx).unwrap()
+            )
+
+
+            // return HttpResponse::Ok().body(format!("{:?}", data));
+        },
+        Err(err) => HttpResponse::Ok().body("Error al recibir la data")
+    }
+}
+
+#[get("/blog/{blog_slug}")]
+async fn get_post(
+    pool: web::Data<DbPool>, 
+    template_manager: web::Data<tera::Tera>, 
+    blog_slug: web::Path<String>
+) -> impl Responder {
+    let conn = pool.get().expect("Problemas al traer la base de datos");
+
+    let url_slug = blog_slug.into_inner();
+
+    match web::block(move || {posts.filter(slug.eq(url_slug)).load::<Post>(&conn)}).await {
+        Ok(data) => {
+            let data = data.unwrap();
+
+            if data.len() == 0 {
+                return HttpResponse::NotFound().finish();
+            }
+
+            let data = &data[0];
+
+            let mut ctx = tera::Context::new();
+            ctx.insert("post", data);
+
+            HttpResponse::Ok().content_type("text/html").body(
+                template_manager.render("posts.html", &ctx).unwrap()
+            )
+
+
+            // return HttpResponse::Ok().body(format!("{:?}", data));
         },
         Err(err) => HttpResponse::Ok().body("Error al recibir la data")
     }
@@ -76,7 +109,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
         .service(index)
         .service(new_post)
-        .service(tera_test)
+        .service(get_post)
         .data(pool.clone())
         .data(tera)
     }).bind(("0.0.0.0", 9900)).unwrap().run().await
